@@ -121,7 +121,7 @@ export async function runTriageAgent(d: Db, ctx: TriageContext) {
       .map((k) => ({ sentryId: k.sentryId, shortId: k.shortId, expectedVersion: k.expectedVersion! })),
   });
 
-  const mcp = writeSentryMcpConfig(project.sentryOrg, project.sentryProject);
+  const mcp = writeSentryMcpConfig(project.sentryOrg, project.sentryProject, project.sentryConnection);
   try {
     log.info("triage", "starting triage agent");
     const policy = triagePolicy();

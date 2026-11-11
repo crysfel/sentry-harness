@@ -28,8 +28,8 @@ export function redactString(s: string): string {
     .replace(/\bsntry[su]_[A-Za-z0-9_=+/.-]{20,}/g, "[redacted]")
     .replace(/\bsk-ant-[A-Za-z0-9_-]{20,}/g, "[redacted]")
     .replace(/(https?:\/\/)[^/\s:@]+:[^/\s@]+@/g, "$1[redacted]@");
-  for (const k of KNOWN_SECRET_ENV) {
-    const v = process.env[k];
+  for (const [k, v] of Object.entries(process.env)) {
+    if (!KNOWN_SECRET_ENV.includes(k) && !k.startsWith("SENTRY_AUTH_TOKEN_")) continue;
     if (v && v.length >= 8) out = out.split(v).join("[redacted]");
   }
   return out;

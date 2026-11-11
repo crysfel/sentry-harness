@@ -1,0 +1,1 @@
+ALTER TABLE `projects` ADD `sentry_connection` text DEFAULT 'default' NOT NULL;

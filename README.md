@@ -44,11 +44,14 @@ Other scripts:
 | Variable | Used by | Notes |
 |---|---|---|
 | `HARNESS_GITHUB_TOKEN` | harness code only (`git` over HTTPS, `gh`) | Fine-grained, limited to registered repos, Contents + Pull requests read/write |
-| `SENTRY_AUTH_TOKEN` | the local `@sentry/mcp-server` (stdio) | Read-only scopes. Written to a per-session 600 file, not a command line |
+| `SENTRY_AUTH_TOKEN` | the local `@sentry/mcp-server` (stdio) | Read-only scopes. Written to a per-session 600 file, not a command line. This is the `default` Sentry connection |
+| `SENTRY_AUTH_TOKEN_<NAME>` (optional, any number) | same | One per additional Sentry account (e.g. a client's). Becomes the connection `<name>` that a project selects; optional `SENTRY_HOST_<NAME>` |
 | `CLAUDE_CODE_OAUTH_TOKEN` | agent sessions | From `claude setup-token`. Unset = the machine's interactive login |
 | `DASHBOARD_PASSWORD` | dashboard | Required when `DASHBOARD_HOST` is not loopback |
 
 Never set `ANTHROPIC_API_KEY` for the worker: it would bill the API instead of the subscription.
+
+**Several Sentry accounts.** One token can read every org its user belongs to, so projects in different orgs of the same account all use `default`. For a separate Sentry account (a client's own login), add `SENTRY_AUTH_TOKEN_ACME=…` to `.env`, restart both processes, and choose the `acme` connection on the project (dashboard form, or `npm run project:add -- owner/name <org> <project> --sentry=acme`). The project row stores only the name; each agent session gets only its own project's token. Health checks verify each token and list which projects use it.
 
 ## How a run works
 

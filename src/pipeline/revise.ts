@@ -111,7 +111,7 @@ export async function revisePr(d: Db, attemptId: number, o: { jobId: number; sig
   let wtPath: string | null = null;
   let costUsd = 0;
   let turns = 0;
-  const mcp = writeSentryMcpConfig(p.sentryOrg, p.sentryProject);
+  const mcp = writeSentryMcpConfig(p.sentryOrg, p.sentryProject, p.sentryConnection);
   try {
     const headSha = await deps.fetchBranch(p.localPath!, a.branch);
     const wt = await createWorktree(p.localPath!, p.id, wtName, { branch: `${a.branch}-rev${number}`, base: headSha, signal: o.signal });

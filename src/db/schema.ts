@@ -28,6 +28,8 @@ export const projects = sqliteTable("projects", {
   localPath: text("local_path"),
   cloneStatus: text("clone_status", { enum: CLONE_STATUSES }).notNull().default("pending"),
   cloneError: text("clone_error"),
+  /** Name of the Sentry login to use (SENTRY_AUTH_TOKEN[_<NAME>] in .env); never the token itself. */
+  sentryConnection: text("sentry_connection").notNull().default("default"),
   sentryOrg: text("sentry_org").notNull(),
   sentryProject: text("sentry_project").notNull(),
   sentryQueryFilter: text("sentry_query_filter"),

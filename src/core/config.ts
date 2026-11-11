@@ -35,7 +35,39 @@ const EnvSchema = z.object({
 
 export type Env = z.infer<typeof EnvSchema>;
 
+/**
+ * A Sentry login the harness can use. `default` comes from SENTRY_AUTH_TOKEN /
+ * SENTRY_HOST; every other one from SENTRY_AUTH_TOKEN_<NAME> / SENTRY_HOST_<NAME>
+ * (e.g. SENTRY_AUTH_TOKEN_ACME → "acme"). Projects store only the name, so
+ * tokens stay in .env and never reach SQLite.
+ */
+export type SentryConnection = { name: string; token?: string; host?: string };
+
+export const DEFAULT_SENTRY_CONNECTION = "default";
+export const SENTRY_CONNECTION_NAME = /^[a-z0-9][a-z0-9_]*$/;
+const NAMED_TOKEN = /^SENTRY_AUTH_TOKEN_([A-Z0-9][A-Z0-9_]*)$/;
+
+export function parseSentryConnections(env: Record<string, string | undefined>): SentryConnection[] {
+  const out: SentryConnection[] = [
+    { name: DEFAULT_SENTRY_CONNECTION, token: env.SENTRY_AUTH_TOKEN || undefined, host: env.SENTRY_HOST || undefined },
+  ];
+  for (const key of Object.keys(env).sort()) {
+    const m = key.match(NAMED_TOKEN);
+    if (!m || !env[key]) continue;
+    const name = m[1].toLowerCase();
+    if (name === DEFAULT_SENTRY_CONNECTION) continue; // SENTRY_AUTH_TOKEN is the default
+    out.push({ name, token: env[key], host: env[`SENTRY_HOST_${m[1]}`] || undefined });
+  }
+  return out;
+}
+
+/** The env variable that holds a connection's token, for messages. */
+export function sentryTokenVar(name: string) {
+  return name === DEFAULT_SENTRY_CONNECTION ? "SENTRY_AUTH_TOKEN" : `SENTRY_AUTH_TOKEN_${name.toUpperCase()}`;
+}
+
 export type Config = Env & {
+  sentryConnections: SentryConnection[];
   dataDir: string;
   dbPath: string;
   reposDir: string;
@@ -76,6 +108,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   const dataDir = path.resolve(projectRoot(), e.HARNESS_DATA_DIR);
   return {
     ...e,
+    sentryConnections: parseSentryConnections(env),
     dataDir,
     dbPath: e.HARNESS_DB_PATH ? path.resolve(e.HARNESS_DB_PATH) : path.join(dataDir, "harness.db"),
     reposDir: path.join(dataDir, "repos"),
@@ -102,6 +135,18 @@ export function requireSecret(name: SecretName): string {
   const v = config()[name];
   if (!v) throw new Error(`${name} is not set. Add it to .env (see .env.example).`);
   return v;
+}
+
+/**
+ * The credential for a project's Sentry connection. A named connection without
+ * a token is an error; `default` without one is allowed so that tests and a
+ * not-yet-configured machine can still run (the MCP server then fails on its own,
+ * and health checks report it).
+ */
+export function sentryConnection(name: string = DEFAULT_SENTRY_CONNECTION): SentryConnection {
+  const c = config().sentryConnections.find((x) => x.name === name);
+  if (c) return c;
+  throw new Error(`Sentry connection "${name}" is not configured: add ${sentryTokenVar(name)} to .env and restart the worker.`);
 }
 
 export function ensureDataDirs(c: Config = config()) {

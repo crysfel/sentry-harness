@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
-import { config } from "../core/config";
+import { config, DEFAULT_SENTRY_CONNECTION, sentryConnection } from "../core/config";
 
 /** Server name used in --mcp-config; tool names become mcp__sentry__<tool>. */
 export const SENTRY_SERVER = "sentry";
@@ -24,16 +24,21 @@ export const sentryToolNames = (tools: readonly string[] = SENTRY_READ_TOOLS) =>
 
 /**
  * Write a per-session MCP config (mode 600) for the local stdio Sentry server,
- * scoped to one org/project with only the read-only `inspect` skill. The token
+ * scoped to one org/project with only the read-only `inspect` skill, using the
+ * project's Sentry connection (one token per Sentry account). The token
  * goes in the file's env block, not on a command line where `ps` would show it.
  * Returns the file path and a cleanup function.
  */
-export function writeSentryMcpConfig(org: string, project: string): { file: string; cleanup: () => void } {
+export function writeSentryMcpConfig(
+  org: string,
+  project: string,
+  connection: string = DEFAULT_SENTRY_CONNECTION,
+): { file: string; cleanup: () => void } {
   const cfg = config();
-  const token = cfg.SENTRY_AUTH_TOKEN;
+  const conn = sentryConnection(connection);
   const env: Record<string, string> = { MCP_SKILLS: "inspect" };
-  if (token) env.SENTRY_AUTH_TOKEN = token;
-  if (cfg.SENTRY_HOST) env.SENTRY_HOST = cfg.SENTRY_HOST;
+  if (conn.token) env.SENTRY_AUTH_TOKEN = conn.token;
+  if (conn.host) env.SENTRY_HOST = conn.host;
   if (process.env.PATH) env.PATH = process.env.PATH;
 
   const args = [...cfg.SENTRY_MCP_ARGS.split(/\s+/).filter(Boolean), "mcp", "--skills", "inspect", `${org}/${project}`];

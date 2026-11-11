@@ -40,6 +40,7 @@ Do these in order. Everything after step 1 happens **inside the dedicated harnes
 ## 8. Sentry: read-only token
 - [ ] sentry.io → Settings → Account → Personal Tokens (User Auth Tokens) → create with scopes `org:read`, `project:read`, `event:read`. (Add `event:write` only if you switch on Sentry notes for a project.)
 - [ ] Put it in `.env` as `SENTRY_AUTH_TOKEN`.
+- [ ] For each other Sentry account (e.g. a client's), create a token the same way while logged in to that account and add it as `SENTRY_AUTH_TOKEN_<NAME>` (e.g. `SENTRY_AUTH_TOKEN_ACME`). Pick that connection on the project's settings.
 
 ## 9. Install
 ```sh

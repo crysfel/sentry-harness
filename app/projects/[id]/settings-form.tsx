@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { saveProjectSettings } from "../../actions";
 import type { Project } from "@/src/db/schema";
+import { SentryConnectionSelect, type SentryConnectionOption } from "../connection-select";
 
 function Text({ name, label, value, hint, mono, wide }: { name: string; label: string; value: string | number | null; hint?: string; mono?: boolean; wide?: boolean }) {
   return (
@@ -30,13 +31,15 @@ function Check({ name, label, checked, hint }: { name: string; label: string; ch
   );
 }
 
-export function SettingsForm({ project: p }: { project: Project }) {
+export function SettingsForm({ project: p, connections }: { project: Project; connections: SentryConnectionOption[] }) {
   const [state, action, pending] = useActionState(saveProjectSettings, undefined);
   return (
     <form action={action} className="grid max-w-4xl gap-3 text-sm md:grid-cols-2">
       <input type="hidden" name="projectId" value={p.id} />
       <Text name="name" label="Name" value={p.name} />
       <Text name="model" label="Model" value={p.model} hint="Used for triage and fix sessions." />
+      <SentryConnectionSelect options={connections} value={p.sentryConnection} />
+      <div className="hidden md:block" />
       <Text name="sentryOrg" label="Sentry organization" value={p.sentryOrg} mono />
       <Text name="sentryProject" label="Sentry project" value={p.sentryProject} mono />
       <Text name="sentryQueryFilter" label="Sentry query filter" value={p.sentryQueryFilter} mono wide hint="Extra issue-search terms. Note: release.version:>=X is not supported by issue search; legacy-app issues are handled by triage (not_in_repo)." />

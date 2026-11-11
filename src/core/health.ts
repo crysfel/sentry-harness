@@ -2,7 +2,7 @@ import fs from "node:fs";
 import { eq } from "drizzle-orm";
 import type { Db } from "../db/client";
 import { projects, settings } from "../db/schema";
-import { config } from "./config";
+import { config, sentryTokenVar } from "./config";
 import { run } from "./shell";
 import { gh, branchProtected } from "../github/gh";
 
@@ -28,20 +28,29 @@ export async function runHealthChecks(d: Db): Promise<HealthReport> {
     cfg.CLAUDE_CODE_OAUTH_TOKEN ? "CLAUDE_CODE_OAUTH_TOKEN is set (from claude setup-token)" : "Not set: sessions use this machine's interactive login. Run `claude setup-token` for the unattended worker.",
   );
   add("ANTHROPIC_API_KEY absent", !process.env.ANTHROPIC_API_KEY, process.env.ANTHROPIC_API_KEY ? "Set in the worker environment; it is stripped from agent sessions, but remove it from the plist." : "Not set");
-  add("Sentry token", cfg.SENTRY_AUTH_TOKEN ? true : false, cfg.SENTRY_AUTH_TOKEN ? "SENTRY_AUTH_TOKEN is set" : "SENTRY_AUTH_TOKEN is missing; triage cannot read Sentry.");
-
-  if (cfg.SENTRY_AUTH_TOKEN) {
+  // One check per Sentry connection (one per Sentry account), listing the projects that use it.
+  const allProjects = d.select().from(projects).all();
+  const usedBy = (name: string) => allProjects.filter((p) => p.sentryConnection === name).map((p) => p.name);
+  const configured = cfg.sentryConnections.filter((c) => c.token);
+  if (!configured.length) add("Sentry token", false, "No Sentry token in .env (SENTRY_AUTH_TOKEN or SENTRY_AUTH_TOKEN_<NAME>); triage cannot read Sentry.");
+  for (const c of configured) {
+    const users = usedBy(c.name);
     const r = await run(cfg.SENTRY_MCP_COMMAND, [...cfg.SENTRY_MCP_ARGS.split(/\s+/), "auth", "whoami"], {
       timeoutMs: 120_000,
-      env: { SENTRY_AUTH_TOKEN: cfg.SENTRY_AUTH_TOKEN, SENTRY_HOST: cfg.SENTRY_HOST },
+      env: { SENTRY_AUTH_TOKEN: c.token, SENTRY_HOST: c.host },
     }).catch((e) => ({ ok: false, stdout: "", stderr: String(e) }));
-    add("Sentry MCP server", r.ok, r.ok ? firstLine(r.stdout) || "reachable" : firstLine(r.stderr || r.stdout));
+    const detail = r.ok ? firstLine(r.stdout) || "reachable" : firstLine(r.stderr || r.stdout);
+    add(`Sentry: ${c.name} (${sentryTokenVar(c.name)})`, r.ok, `${detail} · ${users.length ? `used by ${users.join(", ")}` : "no projects use it"}`);
+  }
+  for (const name of new Set(allProjects.map((p) => p.sentryConnection))) {
+    if (configured.some((c) => c.name === name)) continue;
+    add(`Sentry: ${name}`, false, `${sentryTokenVar(name)} is missing in .env; triage fails for ${usedBy(name).join(", ")}.`);
   }
 
   if (cfg.HARNESS_GITHUB_TOKEN) {
     const user = await gh(["api", "user", "--jq", ".login"]).catch((e) => ({ ok: false, stdout: "", stderr: String(e) }));
     add("GitHub token (gh)", user.ok, user.ok ? `authenticated as ${user.stdout.trim()}` : firstLine(user.stderr));
-    for (const p of d.select().from(projects).all()) {
+    for (const p of allProjects) {
       const repo = await gh(["api", `repos/${p.repoSlug}`, "--jq", ".permissions.push"]).catch(() => ({ ok: false, stdout: "", stderr: "" }));
       add(`Token access: ${p.repoSlug}`, repo.ok && repo.stdout.trim() === "true", repo.ok ? (repo.stdout.trim() === "true" ? "read and push" : "read only") : "no access");
       if (p.defaultBranch) {

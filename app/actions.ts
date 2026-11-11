@@ -9,6 +9,7 @@ import { db } from "@/src/db/client";
 import { issueGroups, issues, notifications, projects, runs } from "@/src/db/schema";
 import { enqueueJob, hasPendingJob, requestCancelRun, requestRun } from "@/src/db/queries/jobs";
 import { parseRepoSlug } from "@/src/github/git";
+import { config, DEFAULT_SENTRY_CONNECTION, sentryTokenVar } from "@/src/core/config";
 import { isValidSession, passwordRequired, safeEqual, SESSION_COOKIE, sessionToken } from "./lib/auth";
 
 /**
@@ -40,8 +41,19 @@ export async function login(formData: FormData) {
 
 // ---------- projects ----------
 
+/** A Sentry connection name that exists in .env (the token itself never leaves .env). */
+const sentryConnectionField = z
+  .string()
+  .trim()
+  .default(DEFAULT_SENTRY_CONNECTION)
+  .superRefine((n, ctx) => {
+    if (config().sentryConnections.some((c) => c.name === n)) return;
+    ctx.addIssue({ code: "custom", message: `unknown Sentry connection "${n}": add ${sentryTokenVar(n)} to .env and restart the dashboard and worker` });
+  });
+
 const AddProject = z.object({
   repo: z.string().min(3),
+  sentryConnection: sentryConnectionField,
   sentryOrg: z.string().regex(/^[a-z0-9][a-z0-9_-]*$/i, "Sentry organization slug"),
   sentryProject: z.string().regex(/^[a-z0-9][a-z0-9_-]*$/i, "Sentry project slug"),
   sentryQueryFilter: z.string().max(500).optional(),
@@ -51,6 +63,7 @@ export async function addProject(_prev: { error?: string } | undefined, formData
   await guard();
   const parsed = AddProject.safeParse({
     repo: formData.get("repo"),
+    sentryConnection: formData.get("sentryConnection") ?? undefined,
     sentryOrg: formData.get("sentryOrg"),
     sentryProject: formData.get("sentryProject"),
     sentryQueryFilter: formData.get("sentryQueryFilter") || undefined,
@@ -66,6 +79,7 @@ export async function addProject(_prev: { error?: string } | undefined, formData
       name: slug.split("/")[1],
       repoSlug: slug,
       repoUrl: `https://github.com/${slug}.git`,
+      sentryConnection: parsed.data.sentryConnection,
       sentryOrg: parsed.data.sentryOrg,
       sentryProject: parsed.data.sentryProject,
       sentryQueryFilter: parsed.data.sentryQueryFilter?.trim() || null,
@@ -95,6 +109,7 @@ const optText = z
 
 const ProjectSettings = z.object({
   name: z.string().trim().min(1).max(100),
+  sentryConnection: sentryConnectionField,
   sentryOrg: z.string().regex(/^[a-z0-9][a-z0-9_-]*$/i),
   sentryProject: z.string().regex(/^[a-z0-9][a-z0-9_-]*$/i),
   sentryQueryFilter: optText,

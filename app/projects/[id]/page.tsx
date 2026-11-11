@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
-import { getJobEvents, getProject, getProjectJobs, nextScheduledRun } from "../../lib/data";
+import { getJobEvents, getProject, getProjectJobs, getSentryConnections, nextScheduledRun } from "../../lib/data";
 import { recloneProject, testConfiguration } from "../../actions";
 import { AutoRefresh } from "../../components/auto-refresh";
 import { ActionButton, Badge, Empty, L, Section, Time, duration } from "../../components/ui";
@@ -34,7 +34,7 @@ async function ProjectView({ params }: { params: Promise<{ id: string }> }) {
         <Badge status={p.cloneStatus} />
         <span className="font-mono text-xs text-zinc-500">
           {p.repoSlug}
-          {p.defaultBranch ? `@${p.defaultBranch}` : ""} · {p.sentryOrg}/{p.sentryProject}
+          {p.defaultBranch ? `@${p.defaultBranch}` : ""} · {p.sentryConnection !== "default" ? `${p.sentryConnection}: ` : ""}{p.sentryOrg}/{p.sentryProject}
         </span>
         <span className="text-sm text-zinc-500">{p.enabled ? <>Next run <Time iso={next?.toISOString()} /></> : "Scheduled runs disabled"}</span>
         <div className="ml-auto flex gap-2">
@@ -108,7 +108,7 @@ async function ProjectView({ params }: { params: Promise<{ id: string }> }) {
       )}
 
       <Section title="Settings">
-        <SettingsForm project={p} />
+        <SettingsForm project={p} connections={await getSentryConnections()} />
       </Section>
     </div>
   );

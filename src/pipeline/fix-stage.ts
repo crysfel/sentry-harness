@@ -75,7 +75,7 @@ export async function fixUnit(
   let wtPath: string | null = null;
   let costUsd = 0;
   let turns = 0;
-  const mcp = writeSentryMcpConfig(project.sentryOrg, project.sentryProject);
+  const mcp = writeSentryMcpConfig(project.sentryOrg, project.sentryProject, project.sentryConnection);
   try {
     const wt = await createWorktree(repoDir, project.id, wtName, { branch, base: baseSha, signal: opts.signal });
     wtPath = wt.path;

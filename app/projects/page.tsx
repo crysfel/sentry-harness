@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { getProjects } from "../lib/data";
+import { getProjects, getSentryConnections } from "../lib/data";
 import { AutoRefresh } from "../components/auto-refresh";
 import { Badge, Empty, L, Section, Table } from "../components/ui";
 import { AddProjectForm } from "./add-form";
@@ -12,10 +12,16 @@ export default function Page() {
         <ProjectList />
       </Suspense>
       <Section title="Add a project">
-        <AddProjectForm />
+        <Suspense fallback={<p className="text-sm text-zinc-500">Loading…</p>}>
+          <AddProject />
+        </Suspense>
       </Section>
     </div>
   );
+}
+
+async function AddProject() {
+  return <AddProjectForm connections={await getSentryConnections()} />;
 }
 
 async function ProjectList() {
@@ -50,6 +56,7 @@ async function ProjectList() {
                   {p.defaultBranch ? `@${p.defaultBranch}` : ""}
                 </td>
                 <td className="font-mono text-xs">
+                  {p.sentryConnection !== "default" && <span className="text-zinc-500">{p.sentryConnection}: </span>}
                   {p.sentryOrg}/{p.sentryProject}
                 </td>
                 <td>

@@ -2,8 +2,9 @@
 
 import { useActionState } from "react";
 import { addProject } from "../actions";
+import { SentryConnectionSelect, type SentryConnectionOption } from "./connection-select";
 
-export function AddProjectForm() {
+export function AddProjectForm({ connections }: { connections: SentryConnectionOption[] }) {
   const [state, action, pending] = useActionState(addProject, undefined);
   return (
     <form action={action} className="grid max-w-2xl gap-3 text-sm md:grid-cols-2">
@@ -12,6 +13,8 @@ export function AddProjectForm() {
         <input name="repo" required placeholder="owner/name or https://github.com/owner/name" />
         <span className="text-xs text-zinc-500">The harness clones it over HTTPS with its scoped token. Add the repository to the token on GitHub first.</span>
       </label>
+      <SentryConnectionSelect options={connections} />
+      <div className="hidden md:block" />
       <label className="flex flex-col gap-1">
         <span>Sentry organization slug</span>
         <input name="sentryOrg" required placeholder="peacefulhymns-backend" />

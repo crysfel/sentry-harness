@@ -19,6 +19,7 @@ import {
   type IssueStatus,
 } from "@/src/db/schema";
 import { Cron } from "croner";
+import { config } from "@/src/core/config";
 
 /**
  * Read model for the dashboard. Every function awaits `connection()` first:
@@ -34,6 +35,12 @@ export async function getProjects() {
 export async function getProject(id: number) {
   await connection();
   return db().select().from(projects).where(eq(projects.id, id)).get();
+}
+
+/** Sentry connection names and whether each has a token. Never the tokens themselves. */
+export async function getSentryConnections() {
+  await connection(); // read .env at request time, not at build time
+  return config().sentryConnections.map((c) => ({ name: c.name, configured: Boolean(c.token) }));
 }
 
 export function nextScheduledRun(cronExpr: string, enabled: boolean): Date | null {
