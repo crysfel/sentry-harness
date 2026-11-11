@@ -1,0 +1,5 @@
+# logfilename                                   [owner:group]  mode count size(KB) when  flags
+__ROOT__/data/logs/worker.log                   __USER__:staff 644  7     10240    *     JN
+__ROOT__/data/logs/worker.err.log               __USER__:staff 644  7     10240    *     JN
+__ROOT__/data/logs/web.log                      __USER__:staff 644  7     10240    *     JN
+__ROOT__/data/logs/web.err.log                  __USER__:staff 644  7     10240    *     JN

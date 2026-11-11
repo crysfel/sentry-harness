@@ -1,0 +1,51 @@
+{
+  "name": "sentry-harness",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --hostname ${DASHBOARD_HOST:-127.0.0.1} --port ${PORT:-3100}",
+    "build": "next build",
+    "start": "next start --hostname ${DASHBOARD_HOST:-127.0.0.1} --port ${PORT:-3100}",
+    "lint": "eslint",
+    "typecheck": "next typegen && tsc --noEmit",
+    "worker": "tsx src/worker/index.ts",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "tsx scripts/migrate.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "project:add": "tsx scripts/add-project.ts"
+  },
+  "dependencies": {
+    "better-sqlite3": "^13.0.3",
+    "croner": "^11.0.0",
+    "drizzle-orm": "^0.45.4",
+    "next": "16.4.6",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "server-only": "^0.0.1",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@tailwindcss/turbopack": "4.3.3",
+    "@types/better-sqlite3": "^9.6.0",
+    "@types/node": "^24.19.2",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "drizzle-kit": "^0.31.11",
+    "eslint": "^9",
+    "eslint-config-next": "16.4.6",
+    "tailwindcss": "4.3.3",
+    "tsx": "^4.23.15",
+    "typescript": "^5",
+    "vitest": "^5.1.0"
+  },
+  "allowScripts": {
+    "esbuild@0.18.20": true,
+    "esbuild@0.25.12": true,
+    "esbuild@0.28.2": true,
+    "better-sqlite3@13.0.3": true
+  },
+  "engines": {
+    "node": ">=22.15"
+  }
+}
